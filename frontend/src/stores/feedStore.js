@@ -1,23 +1,34 @@
 import { defineStore } from "pinia";
-import axios from "axios";
 import { useAuthStore } from "./authStore";
+import api from "../services/api";
+import { useToastStore } from "./toastStore";
 
-const API_URL = "http://localhost:5032/api/tweets";
-const WS_URL = "ws://localhost:5032/ws";
+const WS_URL = `${import.meta.env.VITE_WS_URL}`;
 
 export const useFeedStore = defineStore("feed", {
   state: () => ({
     tweets: [],
     ws: null,
+    isLoading: false,
   }),
   actions: {
     async fetchFeed() {
-      const response = await axios.get(`${API_URL}/feed`);
-      this.tweets = response.data;
+      this.isLoading = true;
+      try {
+        const response = await api.get(`/tweets/feed`);
+        this.tweets = response.data;
+      } catch (err) {
+      } finally {
+        this.isLoading = false;
+      }
     },
 
-    async createTweet(content, userId) {
-      await axios.post(API_URL, { user_id: userId, content });
+    async createTweet(content) {
+      const authStore = useAuthStore();
+      const toastStore = useToastStore();
+
+      await api.post("/tweets", { user_id: authStore.user.id, content });
+      toastStore.show("Tweet posted successfully!", "success");
     },
 
     connectWebSocket() {
@@ -37,21 +48,27 @@ export const useFeedStore = defineStore("feed", {
 
     async addComment(tweetId, content) {
       const authStore = useAuthStore();
-      const response = await axios.post(`${API_URL}/${tweetId}/comments`, {
-        user_id: authStore.user.id,
-        content: content,
-      });
+      const toastStore = useToastStore();
 
-      const tweet = this.tweets.find((t) => t.id === tweetId);
-      if (tweet) {
-        if (!tweet.comments) tweet.comments = [];
-        tweet.comments.push({
-          id: response.data.id,
-          content: content,
+      try {
+        const response = await api.post(`/tweets/${tweetId}/comments`, {
           user_id: authStore.user.id,
-          username: authStore.user.username,
+          content: content,
         });
-      }
+
+        const tweet = this.tweets.find((t) => t.id === tweetId);
+        if (tweet) {
+          if (!tweet.comments) tweet.comments = [];
+          tweet.comments.push({
+            id: response.data.id,
+            content: content,
+            user_id: authStore.user.id,
+            username: authStore.user.username,
+          });
+        }
+
+        toastStore.show("Reply posted!", "success");
+      } catch (err) {}
     },
   },
 });

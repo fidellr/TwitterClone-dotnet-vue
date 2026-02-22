@@ -1,7 +1,6 @@
 import { defineStore } from "pinia";
-import axios from "axios";
-
-const API_URL = "http://localhost:5032/api/auth";
+import api from "../services/api";
+import { useToastStore } from "./toastStore";
 
 export const useAuthStore = defineStore("auth", {
   state: () => ({
@@ -10,25 +9,30 @@ export const useAuthStore = defineStore("auth", {
   }),
   actions: {
     async register(username, email, password) {
-      await axios.post(`${API_URL}/register`, { username, email, password });
+      await api.post("/auth/register", { username, email, password });
+
+      const toastStore = useToastStore();
+      toastStore.show(
+        "Account created successfully! Please log in.",
+        "success",
+      );
     },
     async login(email, password) {
-      const response = await axios.post(`${API_URL}/login`, {
-        email,
-        password,
-      });
+      const response = await api.post("/auth/login", { email, password });
       this.token = response.data.token;
       this.user = response.data.user;
+
       localStorage.setItem("token", this.token);
       localStorage.setItem("user", JSON.stringify(this.user));
-      axios.defaults.headers.common["Authorization"] = `Bearer ${this.token}`;
+
+      const toastStore = useToastStore();
+      toastStore.show("Welcome back!", "success");
     },
     logout() {
       this.user = null;
       this.token = null;
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-      delete axios.defaults.headers.common["Authorization"];
     },
   },
 });

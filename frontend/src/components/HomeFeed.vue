@@ -9,12 +9,13 @@ import axios from 'axios';
 const feedStore = useFeedStore();
 const authStore = useAuthStore();
 const router = useRouter();
+
 const newTweetContent = ref('');
 const commentInputs = ref({});
+const isTweeting = ref(false);
 
 onMounted(() => {
     if (authStore.token) {
-        axios.defaults.headers.common['Authorization'] = `Bearer ${authStore.token}`;
         feedStore.fetchFeed();
         feedStore.connectWebSocket();
     }
@@ -22,15 +23,22 @@ onMounted(() => {
 
 const submitTweet = async () => {
     if (!newTweetContent.value.trim()) return;
-    await feedStore.createTweet(newTweetContent.value, authStore.user.id);
-    newTweetContent.value = '';
+
+    isTweeting.value = true;
+    try {
+        await feedStore.createTweet(newTweetContent.value);
+        newTweetContent.value = '';
+    } catch (err) { }
+    finally {
+        isTweeting.value = false;
+    }
 };
 
 const submitComment = async (tweetId) => {
     const content = commentInputs.value[tweetId];
-    if (!content) return;
+    if (!content || !content.trim()) return;
     await feedStore.addComment(tweetId, content);
-    commentInputs.value[tweetId] = ''; // Clear input
+    commentInputs.value[tweetId] = '';
 };
 
 const logout = () => {
@@ -49,11 +57,17 @@ const logout = () => {
         <div class="compose-section">
             <textarea v-model="newTweetContent" placeholder="What's happening?" class="compose-input"></textarea>
             <div class="compose-actions">
-                <button @click="submitTweet" class="btn-primary">Tweet</button>
+                <button @click="submitTweet" class="btn-primary">
+                    {{ isTweeting ? "Posting..." : "Post" }}
+                </button>
             </div>
         </div>
 
-        <div class="feed-list">
+        <div v-if="feedStore.isLoading" class="loading-state">
+            Loading tweets...
+        </div>
+
+        <div v-else class="feed-list">
             <div v-for="tweet in feedStore.tweets" :key="tweet.id" class="tweet-card">
 
                 <div class="tweet-header">
@@ -76,7 +90,7 @@ const logout = () => {
 
                 <div class="comment-input-area">
                     <input v-model="commentInputs[tweet.id]" class="input-field input-rounded"
-                        placeholder="Post your reply" />
+                        placeholder="Post your reply" @keyup.enter="submitComment(tweet.id)" />
                     <button class="btn-outline" @click="submitComment(tweet.id)">Reply</button>
                 </div>
             </div>
@@ -85,6 +99,18 @@ const logout = () => {
 </template>
 
 <style scoped>
+.loading-state {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-muted);
+    font-size: 16px;
+}
+
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .feed-layout {
     max-width: 600px;
     margin: 0 auto;
