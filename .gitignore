@@ -1,6 +1,10 @@
-[Bb]in/
-[Oo]bj/
-[Oo]ut/
+**/[Bb]in/
+**/bin\\Debug/
+**/[Oo]bj/
+**/[Dd]ebug/
+**/[Rr]elease/
+**/[Oo]ut/
+**/[Bb]uild/
 .vs/
 .vscode/
 *.user
