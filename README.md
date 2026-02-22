@@ -2,6 +2,8 @@
 
 A full-stack Twitter clone built with **.NET 10** (C#) and **Vue 3**. This project demonstrates strict adherence to **Clean Architecture** principles, the CQRS pattern using MediatR, and features a native WebSocket implementation for real-time feed updates.
 
+DEMO: https://twitterclone-dotnet-vue-production-68fb.up.railway.app
+
 ## ✨ Features
 
 * **User Authentication**: Secure JWT-based registration and login with BCrypt password hashing.
